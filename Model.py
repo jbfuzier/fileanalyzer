@@ -3,9 +3,11 @@ from Tools.tools import hashdigest, exiftool
 import logging
 from config import ConfigBorg
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, ForeignKey, create_engine
-from sqlalchemy.orm import relationship, backref, sessionmaker
+from sqlalchemy import Column, Integer, String, ForeignKey, create_engine, DateTime
+from sqlalchemy.orm import relationship, backref, sessionmaker, scoped_session
 import os
+import json
+from datetime import datetime
 
 
 Base = declarative_base()
@@ -27,8 +29,9 @@ class Db():
     def _initDb(self, db):
         #self.engine = create_engine(db, echo=False, connect_args={'timeout': 15})
         self.engine = create_engine(db, echo=False)
-        Session = sessionmaker(bind=self.engine)
-        self.session = Session()
+        session_factory = sessionmaker(bind=self.engine)
+        print "SESSIONFACTORY"
+        self.session = scoped_session(session_factory)
         Base.metadata.create_all(self.engine)
         self.meta = Base.metadata
 
@@ -39,6 +42,7 @@ class Db():
     def close(self):
         self.session.close()
         logging.debug("DB session closed...")
+
 
 
 
@@ -73,23 +77,24 @@ class File(Base):
 class Submission(Base):
     __tablename__ = 'submissions'
     id = Column(Integer, primary_key=True, autoincrement=True)
+    date = Column(DateTime, default=datetime.utcnow())
     name = Column(String)
     extension = Column(String)
     file_id = Column(Integer, ForeignKey('files.id'))
     file = relationship("File", backref='submissions')
     exif_tools = exiftool()
 
-    def __init__(self, path, name, db):
+    def __init__(self, path, name):
         self.config = ConfigBorg()
         self.path = path
         self.name = name
-        self.db = db
+        #self.db = db
         logging.debug(path)
         self.new_file = True
         self._populate()  # Hash and type and create File object
         logging.debug("%s"%self)
-        self.db.session.add(self)
-        self.db.session.commit()
+        Session().add(self)
+        Session().commit()
 
     def _populate(self):
         """
@@ -111,7 +116,7 @@ class Submission(Base):
         else:
             self.extension = ""
 
-        file = self.db.session.query(File).filter_by(sha256=sha256).all()
+        file = Session().query(File).filter_by(sha256=sha256).all()
         if len(file) != 0:
             self.new_file = False
             self.file = file[0]
@@ -132,8 +137,8 @@ class Submission(Base):
                 mimetype=mimetype,
                 size=metadata['File:FileSize'],
             )
-            self.db.session.add(self.file)
-            self.db.session.commit()
+            Session().add(self.file)
+            Session().commit()
 
     def __str__(self):
         if self.file is None:
@@ -159,8 +164,34 @@ class Report(Base):
     submission_id = Column(Integer, ForeignKey('submissions.id'))
     submission = relationship("Submission", backref='reports')
 
+    @property
+    def full_dict(self):
+        return json.loads(self.full)
+
+    def __str__(self):
+        return "{:<20} {:<6} {:<10} {:<10}".format(
+            self.module,
+            self.short,
+            self.submission,
+            self.submission.file,
+            )
 #db = Db()
 #session = db.session
+
+
+class ReportSection(Base):
+    __tablename__ = 'sections'
+    id = Column(Integer, primary_key=True)
+    type = Column(String)
+    value = Column(String)
+    report_id = Column(Integer, ForeignKey('reports.id'))
+    report = relationship("Report", backref='sections')
+    @property
+    def value_dict(self):
+        return json.loads(self.value)
+
+
+Session = Db().session
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)

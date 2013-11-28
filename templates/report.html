@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block body %}
+{% for submission in submissions %}
+    <div data-dojo-type="dijit/layout/BorderContainer" style="width: 100%; height: 100%;">
+     <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'">{{submission.name}} -- {{submission.file.type}} -- {{submission.date}}</div>
+     <div data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region:'center'">
+        {% for report in submission.reports %}
+            <div data-dojo-type="dijit/layout/ContentPane" title="{{report.module}}">
+                {{report.short}}
+                {% for section in report.sections %}
+                    <div class='reportsection' data-dojo-type="dijit/layout/ContentPane">
+            
+                    {% if section.type=='json' %}
+                        <ul> 
+                        {% for key, value in section.value_dict.items() recursive %}
+                            <li>
+                                {% if value is not mapping %}
+                                {{ key }}<ul><li>
+                                {{ value }}</li></ul>
+                                {% else %}
+                                {{ key }}
+                                <ul>{{ loop(value.items()) }}</ul>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    
+                    {% elif section.type=='img' %}
+                        <img src="/{{section.value_dict['path'] }}">
+                    {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+     </div>
+     <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'bottom'">Bottom pane</div>
+</div>
+{% endfor %}
+
+{% endblock %}

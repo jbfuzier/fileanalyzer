@@ -1,27 +1,29 @@
 from threading import Thread
 from Queue import Queue
 from config import ConfigBorg
-from Tools.tools import exiftool
+from Tools.entropy_pil import Entropy as EntropyTool
+from Tools.entropy_pil import MapFile
 import logging
-from Model import Report, ReportSection, Session, Submission
+from Model import Report, Session, ReportSection, Submission
+import os
 from json import JSONEncoder
 
-__ModuleName__ = "Exiftools"
+__ModuleName__ = "Entropy"
 
-class Exiftools():
+
+class Entropy():
     def __init__(self, log_queue=None):
         self.workers = []
         self.queue = Queue()
         self.result_queue = Queue()
         self.log_queue = log_queue
         self.config = ConfigBorg()
-        self.exif_tool = exiftool()
         self.__init_workers()
 
     def __init_workers(self):
         logging.debug("Spawning workers")
         for w in range(self.config.worker_threads):
-            p = skeletonWorker(self.queue, self.result_queue, self.log_queue, self.exif_tool)
+            p = skeletonWorker(self.queue, self.result_queue, self.log_queue, self.config.entropy['output_dir'])
             self.workers.append(p)
             p.start()
         logging.debug("Done : %s" % self.workers)
@@ -59,12 +61,12 @@ class Exiftools():
 
 
 class skeletonWorker(Thread):
-    def __init__(self, job_queue, result_queue, log_queue, exif_tool):
+    def __init__(self, job_queue, result_queue, log_queue, out_dir):
         Thread.__init__(self)
+        self.out_dir = out_dir
         self.log_queue = log_queue
         self.queue = job_queue
         self.result_queue = result_queue
-        self.exif_tool = exif_tool
 
     def run(self):
     #if self.log_queue is not None:
@@ -83,42 +85,39 @@ class skeletonWorker(Thread):
         return 0
 
     def _do_work(self, submission_id):
-        s = Session()
-        submission = s.query(Submission).filter(Submission.id==submission_id).one()
+        print Session.query(Submission).all()
+        submission = Session.query(Submission).filter(Submission.id==submission_id).one()
         #Do the actual work
-        metadata = self.exif_tool.get_metadata(submission.file.path)
-        metadata_hierarchy = {}
-        for key, value in metadata.iteritems():
-            parent = metadata_hierarchy
-            subkeys = key.split(':')
-            for i in range(len(subkeys) - 1):
-                current = subkeys[i]
-                if current not in parent:
-                    parent[current] = {}
-                parent = parent[current]
-            current = subkeys[-1]
-            parent[current] = value
-        json = JSONEncoder().encode(metadata_hierarchy)
-        s = Session()
+        e = EntropyTool(submission.file.path)
+        (entropy, mean, stdv, max_dev) = e.analyze()
+        out = os.path.join(self.out_dir, "%s.png" % submission.file.sha256)
+        e.writeimg(out)
+        mapout = os.path.join(self.out_dir, "%s_map.png" % submission.file.sha256)
+        MapFile().writeimg(submission.file.path, mapout)
+        r1 = {'path': out.replace("\\", "/"), 'comment': 'Entropy of the file'}
+        r2 = {'path': mapout.replace("\\", "/"), 'comment': 'Maping of the file'}
+        json1 = JSONEncoder().encode(r1)
+        json2 = JSONEncoder().encode(r2)
         r = Report(
             module=__ModuleName__,
             short="Short desc...",
             full="",
             submission=submission
         )
-        s.add(r)
-        section = ReportSection(
-            type='json',
-            value=json,
+        Session.add(r)
+        section1 = ReportSection(
+            type='img',
+            value=json1,
             report=r
         )
-        s.add(section)
-        s.commit()
-        #r._sa_instance_state.session.expunge(r)
+        Session.add(section1)
+        section2 = ReportSection(
+            type='img',
+            value=json2,
+            report=r
+        )
+        Session.add(section2)
+        Session.commit()
+        #r._sa_instance_state.session.expunge(r)  # Ensure report is not linked to a session in this thread
         self.result_queue.put(r)
 
-
-if __name__ == '__main__':
-    import logging
-    logging.basicConfig(level=logging.DEBUG)
-    s =Skeleton()

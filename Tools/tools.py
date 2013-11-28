@@ -38,7 +38,7 @@ def EnableLogging():
     root = logging.getLogger()
     root.setLevel(logging.DEBUG)  # send all messages, for demo; no other level or filter logic applied.
     h = logging.handlers.RotatingFileHandler(config.logging['filepath'], 'a', 300, 10)
-    log_format_console = """%(threadName)-10s - %(levelname)-8s: %(filename)s(%(module)s.%(funcName)s:%(lineno)d)-> %(message)s"""
+    log_format_console = """%(threadName)-10s %(thread)d - %(levelname)-8s: %(filename)s(%(module)s.%(funcName)s:%(lineno)d)-> %(message)s"""
     log_format_file = """%(asctime)s-20s - %(processName)-10s - %(levelname)-8s: %(filename)s(%(module)s.%(funcName)s:%(lineno)d)-> %(message)s"""
     f = logging.Formatter(log_format_file)
     h.setFormatter(f)

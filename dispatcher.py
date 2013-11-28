@@ -1,4 +1,5 @@
 import Model
+from Model import Session
 import logging
 from threading import Thread
 from Tools import tools
@@ -25,9 +26,9 @@ class Dispatcher(Thread):
     def run(self):
         #print self.log_queue.__dict__['_opid']
         #tools.EnableLogging(self.log_queue)
-        self.db = Model.Db()
+        #self.db = Model.Db()
         self.eventLoop()
-        self.db.close()
+        #self.db.close()
         logging.warning("DISPATCHER ENDED")
 
     def eventLoop(self):
@@ -37,7 +38,7 @@ class Dispatcher(Thread):
             # Get Job & Dispatch it
             try:
                 logging.debug("Waiting for a job")
-                job = self.queue.get(block=True, timeout=5)
+                job = self.queue.get(block=True, timeout=15)
                 self.queue.task_done()
                 if job is None:
                     logging.warning("Dispatcher received None, exiting...")
@@ -45,8 +46,7 @@ class Dispatcher(Thread):
                 submission = self.generateSubmission(job)
                 # Dispatch Job
                 logging.debug("Got %s, dispatching to modules" % submission)
-                for m in self.modules:
-                    self.analyseSubmission(submission)
+                self.analyseSubmission(submission)
             except Queue.Empty:
                 logging.debug("Timeout while waiting for job...")
 
@@ -79,16 +79,17 @@ class Dispatcher(Thread):
     def handleResult(self, module, result):
         # TODO handle results (save to DB based on module name, Result object linked to the Submission
         logging.debug("Got result %s from %s, saving to Db..." % (result, module))
-        self.db.session.add(result)
-        self.db.session.commit()
+        #Session().merge(result)
+        #Session().commit()
 
     def generateSubmission(self, job):
         file_path = job['path']
         file_name = job['name']
-        submission = Model.Submission(file_path, file_name, self.db)
+        submission = Model.Submission(file_path, file_name)
         return submission
 
     def analyseSubmission(self, submission):
+        Session().expunge(submission)
         if type(submission) != Model.Submission:
             raise Exception("Invalid submission object")
         for m in self.modules:

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, g
+from flask import Flask, render_template, request, g, send_from_directory, url_for
 from werkzeug import secure_filename
 from config import ConfigBorg
 from Tools.tools import hashdigest
@@ -6,22 +6,26 @@ import os
 import logging
 from Queue import Queue
 from dispatcher import Dispatcher
-from Model import Db, Report, File
+from Model import Report, File, Session
 
 config = ConfigBorg()
 
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = config.flask['upload_dir']
-db = Db()
 
 @app.route('/report/<sha256>')
 def report(sha256):
-    file = db.session.query(File).filter_by(sha256=sha256).one()
+    try:
+        file = Session().query(File).filter_by(sha256=sha256).one()
+    except:
+        return "No result yet"
     submissions = file.submissions
-    reports = [(s, s.reports) for s in submissions]
-    return "%s"%files
-    return sha256
+    return render_template('report.html', submissions=submissions)
+
+@app.route('/output/<path:filename>')
+def output(filename):
+    return send_from_directory(app.root_path + '/output/', filename)
 
 @app.route('/shutdown')
 def shutdown():
@@ -63,6 +67,8 @@ def hello_world():
         return "%s (%s) saved to %s - job : %s" % (filename, sha256, normalized_name_path, job)
     else:
         return render_template('submit.html')
+
+
 
 
 def start_flask():
