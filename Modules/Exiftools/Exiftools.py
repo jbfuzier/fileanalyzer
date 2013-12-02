@@ -36,8 +36,9 @@ class Exiftools():
                 m.join()
                 logging.debug("%s worker exit success" % m)
             logging.debug("Module ended")
+            return False
         else:
-            self._filter_submissions(submission)
+            return self._filter_submissions(submission)
 
     def reportAlreadyAvailable(self, submission):
         return len([r for s in submission.file.submissions for r in s.reports if r.module == __ModuleName__]) != 0
@@ -115,6 +116,7 @@ class skeletonWorker(Thread):
         s.add(section)
         s.commit()
         #r._sa_instance_state.session.expunge(r)
+        s.expunge(r)
         self.result_queue.put(r)
 
 

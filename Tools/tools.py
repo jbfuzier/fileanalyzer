@@ -4,6 +4,7 @@ from config import ConfigBorg
 from multiprocessing import Process, Queue
 from Tools.QueueLoggingHandler import QueueHandler
 import logging
+import urllib2
 
 config = ConfigBorg()
 
@@ -47,6 +48,14 @@ def EnableLogging():
     console.setLevel(logging.DEBUG)
     console.setFormatter(fmt=logging.Formatter(fmt=log_format_console))
     root.addHandler(console)
+
+
+def EnableProxy():
+    opener = urllib2.build_opener(
+        urllib2.HTTPHandler(),
+        urllib2.HTTPSHandler(),
+        urllib2.ProxyHandler(config.proxyhandler))
+    urllib2.install_opener(opener)
 
 
 """

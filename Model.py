@@ -3,10 +3,11 @@ from Tools.tools import hashdigest, exiftool
 import logging
 from config import ConfigBorg
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, ForeignKey, create_engine, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, create_engine, DateTime, Boolean
 from sqlalchemy.orm import relationship, backref, sessionmaker, scoped_session
 import os
 import json
+from json import JSONEncoder
 from datetime import datetime
 
 
@@ -62,6 +63,31 @@ class File(Base):
         path = os.path.join(self.config.flask['upload_dir'], self.sha256)
         return path
 
+    @property
+    def last_submission(self):
+        Session.expire_all()
+        s = Session.query(Submission).filter(File.id == self.id).order_by(-Submission.id).first()
+        return s
+
+    @property
+    def wip(self):
+        if self.last_submission.done is not True:
+                return True
+        return False
+
+    @property
+    def progress(self):
+        d = {
+            'results': self.last_submission.results,
+            'totals': self.last_submission.working_modules
+        }
+        if d['results'] == d['totals']:
+            d['done'] = True
+        else:
+            d['done'] = False
+        json = JSONEncoder().encode(d)
+        return json
+
     def __str__(self):
         return "{:<6} {:<20} {:<10} {:<10} {} {} {}".format(
             self.id,
@@ -79,10 +105,16 @@ class Submission(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     date = Column(DateTime, default=datetime.utcnow())
     name = Column(String)
+    working_modules = Column(Integer, default=0)
+    results = Column(Integer, default=0)
     extension = Column(String)
     file_id = Column(Integer, ForeignKey('files.id'))
     file = relationship("File", backref='submissions')
     exif_tools = exiftool()
+
+    @property
+    def done(self):
+        return self.working_modules == self.results
 
     def __init__(self, path, name):
         self.config = ConfigBorg()

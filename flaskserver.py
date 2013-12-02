@@ -14,6 +14,22 @@ config = ConfigBorg()
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = config.flask['upload_dir']
 
+@app.route('/progress/<sha256>')
+def progress(sha256):
+    try:
+        file = Session().query(File).filter_by(sha256=sha256).one()
+    except:
+        return ""
+    return file.progress
+
+@app.route('/done/<sha256>')
+def done(sha256):
+    try:
+        file = Session().query(File).filter_by(sha256=sha256).one()
+    except:
+        return ""
+    return "%s" % (not file.wip)
+
 @app.route('/report/<sha256>')
 def report(sha256):
     try:
@@ -21,7 +37,7 @@ def report(sha256):
     except:
         return "No result yet"
     submissions = file.submissions
-    return render_template('report.html', submissions=submissions)
+    return render_template('report.html', submissions=submissions, wip=file.wip)
 
 @app.route('/output/<path:filename>')
 def output(filename):

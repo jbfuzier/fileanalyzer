@@ -14,8 +14,9 @@ html, body {
 	<script src='/static/lib/dojo/dojo/dojo.js'></script>
 	
 	<script>
-require(["dojo/parser", "dijit/layout/BorderContainer", "dijit/layout/TabContainer", "dijit/layout/AccordionContainer", "dijit/layout/ContentPane", "dijit/layout/AccordionPane");
+require(["dojo/parser", "dijit/layout/BorderContainer", "dijit/layout/TabContainer", "dijit/layout/AccordionContainer", "dijit/layout/ContentPane", "dijit/layout/AccordionPane","dijit/ProgressBar"]);
 	</script>
+{% block extrahead %}{% endblock %}
 </head>
 <body class="claro">
 {% block body %}

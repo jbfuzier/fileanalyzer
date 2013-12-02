@@ -3,6 +3,7 @@ from Model import Session
 import logging
 from threading import Thread
 from Tools import tools
+from Model import Submission
 from config import ConfigBorg
 import Queue
 
@@ -55,7 +56,7 @@ class Dispatcher(Thread):
                 try:
                     result = m.result_queue.get(block=True, timeout=1)
                     m.result_queue.task_done()
-                    logging.debug("Got result %s" % result)
+#                    logging.debug("Got result %s" % result)
                     self.handleResult(m, result)
                 except Queue.Empty:
                     logging.debug("No result for %s..." % m)
@@ -78,9 +79,12 @@ class Dispatcher(Thread):
 
     def handleResult(self, module, result):
         # TODO handle results (save to DB based on module name, Result object linked to the Submission
-        logging.debug("Got result %s from %s, saving to Db..." % (result, module))
-        #Session().merge(result)
-        #Session().commit()
+#        logging.debug("Got result %s from %s, saving to Db..." % (result, module))
+        result = Session().merge(result)
+        submission = result.submission
+        Session().refresh(submission)
+        submission.results += 1
+        Session().commit()
 
     def generateSubmission(self, job):
         file_path = job['path']
@@ -89,11 +93,17 @@ class Dispatcher(Thread):
         return submission
 
     def analyseSubmission(self, submission):
+        sid = submission.id
         Session().expunge(submission)
         if type(submission) != Model.Submission:
             raise Exception("Invalid submission object")
+        nb_of_modules_for_this_submission = 0
         for m in self.modules:
-            m.analyse(submission)
+            if m.analyse(submission) is True:
+                nb_of_modules_for_this_submission += 1
+        submission = Session().query(Submission).filter(Submission.id == sid).one()
+        submission.working_modules = nb_of_modules_for_this_submission
+        Session.commit()
 
 
 if __name__ == '__main__':
