@@ -193,6 +193,7 @@ class Report(Base):
     module = Column(String)
     short = Column(String)
     full = Column(String)
+    threat_level = Column(Integer, default=50)
     submission_id = Column(Integer, ForeignKey('submissions.id'))
     submission = relationship("Submission", backref='reports')
 

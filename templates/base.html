@@ -10,11 +10,16 @@ html, body {
     margin: 0;
 }
 	</style>
-	<script>dojoConfig = {parseOnLoad: true}</script>
+	<script>//dojoConfig = {parseOnLoad: true}</script>
 	<script src='/static/lib/dojo/dojo/dojo.js'></script>
 	
 	<script>
 require(["dojo/parser", "dijit/layout/BorderContainer", "dijit/layout/TabContainer", "dijit/layout/AccordionContainer", "dijit/layout/ContentPane", "dijit/layout/AccordionPane","dijit/ProgressBar"]);
+require(["dojo/parser", "dojo/ready"], function(parser, ready){
+  ready(10,function(){
+    parser.parse();
+  });
+});
 	</script>
 {% block extrahead %}{% endblock %}
 </head>

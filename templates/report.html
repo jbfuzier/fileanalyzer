@@ -26,15 +26,37 @@
             var timer = setInterval(check_result, 5000);
         </script>
     {% endif %}
+    <script>
+        // Set tab color based on result
+
+        require(["dojo/query","dijit/registry","dojo/dom-style","dojo/ready","dojo/domReady!"], function(query,registry,style, ready){
+            ready(1000,function(){
+                query(".threat_level_100").forEach(function(node){
+                    //console.log(node);
+                    t_obj = registry.byNode(node);
+                    //console.log(t_obj);
+                    t_bt_obj = t_obj.controlButton;
+                    dojo.style(t_bt_obj.domNode, {color:"red",});
+                });
+                query(".threat_level_0").forEach(function(node){
+                    //console.log(node);
+                    t_obj = registry.byNode(node);
+                    //console.log(t_obj);
+                    t_bt_obj = t_obj.controlButton;
+                    dojo.style(t_bt_obj.domNode, {color:"green"});
+                });
+            });
+        });
+    </script>
 {% endblock %}
 
 {% block body %}
 {% for submission in submissions %}
     <div data-dojo-type="dijit/layout/BorderContainer" style="width: 100%; height: 100%;">
-     <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'">{{submission.name}} -- {{submission.file.type}} -- {{submission.date}}</div>
-     <div data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region:'center'">
+     <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'">{{submission.name}} -- {{submission.file.type}} -- {{submission.date}} -- sha1 : {{submission.file.sha1}} -- md5 : {{submission.file.md5}} </div>
+     <div data-dojo-type="dijit/layout/TabContainer" data-dojo-props="region:'center'" >
         {% for report in submission.reports %}
-            <div data-dojo-type="dijit/layout/ContentPane" title="{{report.module}}">
+            <div data-dojo-type="dijit/layout/ContentPane" title="{{report.module}}" class="threat_level_{{report.threat_level}}">
                 {{report.short}}
                 {% for section in report.sections %}
                     <div class='reportsection' data-dojo-type="dijit/layout/ContentPane">

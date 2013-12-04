@@ -10,7 +10,7 @@ __email__ = "g@wenarab.com"
 __status__ = "Production"
 
 # Snippet from http://code.activestate.com/recipes/146306/
-import httplib, mimetypes
+import  mimetypes
 import urlparse
 import urllib
 import urllib2
@@ -34,16 +34,23 @@ class postfile:
         files is a sequence of (name, filename, value) elements for data to be uploaded as files
         Return the server's response page.
         """
+        # Register the streaming http handlers with urllib2
+        #register_openers()
+        # Start the multipart/form-data encoding of the file "DSC0001.jpg"
+        # "image1" is the name of the parameter, which is normally set
+        # via the "name" parameter of the HTML <input> tag.
+
+        # headers contains the necessary Content-Type and Content-Length
+        # datagen is a generator object that yields the encoded parameters
+        #datagen, headers = multipart_encode({"image1": open("DSC0001.jpg")})
+        selector = 'http://www.virustotal.com/vtapi/v2/file/scan'
         content_type, body = postfile.encode_multipart_formdata(fields, files)
-        h = httplib.HTTPS(host)
-        h.putrequest('POST', selector)
-        h.putheader('content-type', content_type)
-        h.putheader('content-length', str(len(body)))
-        h.endheaders()
-        h.send(body)
-        errcode, errmsg, headers = h.getreply()
-    
-        return h.file.read()
+        headers = {
+            'Content-Type': content_type,
+        }
+        request = urllib2.Request(url=selector, data=body, headers=headers)
+        response = urllib2.urlopen(request)
+        return response.read()
 
     @staticmethod
     def encode_multipart_formdata(fields, files):
@@ -52,7 +59,7 @@ class postfile:
         files is a sequence of (name, filename, value) elements for data to be uploaded as files
         Return (content_type, body) ready for httplib.HTTP instance
         """
-        BOUNDARY = '----------ThIs_Is_tHe_bouNdaRY_$'
+        BOUNDARY = '----------This_Is_the_mime_bouNdaRY_$'
         CRLF = '\r\n'
         L = []
         for (key, value) in fields:
@@ -130,8 +137,8 @@ class VirusTotal(object):
                 return ["resource", anything, filename]
 
             # Is URL ?
-            if urlparse.urlparse(anything).scheme:
-                fh = urllib2.urlopen(anything)
+            #if urlparse.urlparse(anything).scheme:
+            #    fh = urllib2.urlopen(anything)
 
             else:
                 # it's file
@@ -393,4 +400,14 @@ A resource can be:
         print
 
 if __name__ == "__main__":
-    main()
+    #main()
+    proxyhandler = {'https': 'https://:3128', 'http': 'http://:3128'}
+    opener = urllib2.build_opener(
+        urllib2.HTTPHandler(),
+        urllib2.HTTPSHandler(),
+        urllib2.ProxyHandler(proxyhandler))
+    urllib2.install_opener(opener)
+    v = VirusTotal("0ef995125afc13d4a0822753c776e65072d1cc2078e8892217de1d61e8d49750")
+    r = v.scan("c:/windows/system32/calc.exe",reanalyze=True)
+    r.join()
+    pass

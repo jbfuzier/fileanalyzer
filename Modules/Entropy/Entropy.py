@@ -101,7 +101,7 @@ class skeletonWorker(Thread):
         json2 = JSONEncoder().encode(r2)
         r = Report(
             module=__ModuleName__,
-            short="Short desc...",
+            short="%s"%e.FileTypeText(),
             full="",
             submission=submission
         )

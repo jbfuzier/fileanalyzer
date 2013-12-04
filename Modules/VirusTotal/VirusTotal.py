@@ -68,6 +68,7 @@ class skeletonWorker(Thread):
         self.queue = job_queue
         self.result_queue = result_queue
         self.vt = vt
+        self.config = ConfigBorg()
 
     def run(self):
     #if self.log_queue is not None:
@@ -99,13 +100,24 @@ class skeletonWorker(Thread):
             submission=submission
         )
         s.add(r)
+        new_vt_submission = False
         if report is None:
             # Unknown in VT
-            pass
-            # Upload file ?
-        else:
+            r.short = "Unknown on VT"
+            if self.config.virustotal['submit_unknown']:
+                report = self.vt.scan(submission.file.path, reanalyze=True)
+                report.join()
+                new_vt_submission = True
+        try:
+            assert report.done is True
             # Known in VT
             r.short = "Detection rate : %s/%s - %s" % (report.positives, report.total, report.verbose_msg)
+            if new_vt_submission:
+                r.short += " (First submission in VT)"
+            if report.positives == 0:
+                r.threat_level = 0
+            elif report.positives > 5:
+                r.threat_level = 100
             report_details = report._report
             json = JSONEncoder().encode(report_details)
             section = ReportSection(
@@ -114,6 +126,9 @@ class skeletonWorker(Thread):
                 report=r
             )
             s.add(section)
+        except Exception as e:
+            logging.error("Could not get report from vt : %s"%e)
+
         s.commit()
         #r._sa_instance_state.session.expunge(r)
         s.expunge(r)
