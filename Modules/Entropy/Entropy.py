@@ -1,107 +1,33 @@
-from threading import Thread
-from Queue import Queue
-from config import ConfigBorg
 from Tools.entropy_pil import Entropy as EntropyTool
 from Tools.entropy_pil import MapFile
-import logging
-from Model import Report, Session, ReportSection, Submission
+from Model import Report, Session, ReportSection
 import os
 from json import JSONEncoder
+from Modules.Skeleton.Skeleton import Skeleton, skeletonWorker
 
-__ModuleName__ = "Entropy"
-
-
-class Entropy():
-    def __init__(self, log_queue=None):
-        self.workers = []
-        self.queue = Queue()
-        self.result_queue = Queue()
-        self.log_queue = log_queue
-        self.config = ConfigBorg()
-        self.__init_workers()
-
-    def __init_workers(self):
-        logging.debug("Spawning workers")
-        for w in range(self.config.worker_threads):
-            p = skeletonWorker(self.queue, self.result_queue, self.log_queue, self.config.entropy['output_dir'])
-            self.workers.append(p)
-            p.start()
-        logging.debug("Done : %s" % self.workers)
-
-    def analyse(self, submission):
-        if submission is None:
-            logging.debug("Notifying every worker to exit...")
-            for m in self.workers:
-                self.queue.put(None)
-                logging.debug("Waiting for %s worker to exit" % m)
-            for m in self.workers:
-                m.join()
-                logging.debug("%s worker exit success" % m)
-            logging.debug("Module ended")
-            return False
-        else:
-            return self._filter_submissions(submission)
-
-    def reportAlreadyAvailable(self, submission):
-        return len([r for s in submission.file.submissions for r in s.reports if r.module == __ModuleName__]) != 0
-
-    def _filter_submissions(self, submission):
-        if not self.reportAlreadyAvailable(submission):  # Check if a report has already been generated for this file
-            return self._accept(submission)
-        else:
-            return self._reject(submission)
-
-    def _accept(self, submission):
-        logging.debug("Accepted")
-        self.queue.put(submission.id)
-        return True
-
-    def _reject(self, submission):
-        logging.debug("Rejected")
-        return False
+class Entropy(Skeleton):
+    def __init__(self, **kwargs):
+        self.worker_class = Worker
+        Skeleton.__init__(self)
 
 
-class skeletonWorker(Thread):
-    def __init__(self, job_queue, result_queue, log_queue, out_dir):
-        Thread.__init__(self)
-        self.out_dir = out_dir
-        self.log_queue = log_queue
-        self.queue = job_queue
-        self.result_queue = result_queue
+class Worker(skeletonWorker):
 
-    def run(self):
-    #if self.log_queue is not None:
-    #EnableLogging(self.log_queue)
-        while True:
-            logging.debug("Waiting for a job...")
-            job = self.queue.get()
-            if job is None:
-                logging.warning("Got None job, exiting...")
-                self.queue.task_done()
-                break
-            logging.debug("Got a job %s"%(job))
-            self._do_work(job)
-            logging.debug("job done %s"%(job))
-            self.queue.task_done()
-        return 0
-
-    def _do_work(self, submission_id):
-        print Session.query(Submission).all()
-        submission = Session.query(Submission).filter(Submission.id==submission_id).one()
+    def _do_work(self, submission):
         #Do the actual work
         e = EntropyTool(submission.file.path)
         (entropy, mean, stdv, max_dev) = e.analyze()
-        out = os.path.join(self.out_dir, "%s.png" % submission.file.sha256)
+        out = os.path.join(self.module_config['output_dir'], "%s.png" % submission.file.sha256)
         e.writeimg(out)
-        mapout = os.path.join(self.out_dir, "%s_map.png" % submission.file.sha256)
+        mapout = os.path.join(self.module_config['output_dir'], "%s_map.png" % submission.file.sha256)
         MapFile().writeimg(submission.file.path, mapout)
         r1 = {'path': out.replace("\\", "/"), 'comment': 'Entropy of the file'}
-        r2 = {'path': mapout.replace("\\", "/"), 'comment': 'Maping of the file'}
+        r2 = {'path': mapout.replace("\\", "/"), 'comment': 'Mapping of the file'}
         json1 = JSONEncoder().encode(r1)
         json2 = JSONEncoder().encode(r2)
         r = Report(
-            module=__ModuleName__,
-            short="%s"%e.FileTypeText(),
+            module=self.__ModuleName__,
+            short="%s" % e.FileTypeText(),
             full="",
             submission=submission
         )
@@ -119,7 +45,5 @@ class skeletonWorker(Thread):
         )
         Session.add(section2)
         Session.commit()
-        #r._sa_instance_state.session.expunge(r)  # Ensure report is not linked to a session in this thread
-        Session.expunge(r)
-        self.result_queue.put(r)
+        return r
 
