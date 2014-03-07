@@ -11,18 +11,18 @@ class ConfigBorg:  # Shared state class (singleton like http://code.activestate.
     # This is evaluated only once in a process, but several times in different processes
     exiftool = {'win32_binary_location': 'Tools\\exiftool.exe'}
     Entropy = {'output_dir': 'output\\entropy', 'worker_threads' : 1}
-    modules = ['Exiftools', 'Entropy', 'VirusTotal', 'HashKB']
+    modules = ['Exiftools', 'Entropy', 'VirusTotal', 'HashKB', 'Pdf']
     logging = {
         'filepath': 'logger.log',
 
     }
     VirusTotal = {'submit_unknown': True, 'apikey': '0ef995125afc13d4a0822753c776e65072d1cc2078e8892217de1d61e8d49750', 'request_rate': 4, 'worker_threads' : 1}
     HashKB = {'worker_threads' : 1, 'dbpath': 'd:\\LocalData\\a189493\\Desktop\\NOT_BACKUPED\\NSLR.sqlite'}
-    Pdf = {'worker_threads' : 1,}
+    Pdf = {'worker_threads' : 1, 'tool_path': 'Tools\\'}
     Exiftools = {'worker_threads' : 1,}
     worker_threads = 2
     flask = {'upload_dir': 'upload'}
     db_path = 'sqlite:///db.sqlite?check_same_thread=False'
-    proxyhandler = {'https': 'https://:3128', 'http': 'http://:3128'}
+    proxyhandler = {'https': 'https://', 'http': 'http://'}
 
 

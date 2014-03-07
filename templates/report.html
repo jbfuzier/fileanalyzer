@@ -78,6 +78,10 @@
                     
                     {% elif section.type=='img' %}
                         <img src="/{{section.value_dict['path'] }}">
+                    {% elif section.type=='text' %}
+                        {{section.value|nl2br}}
+                    {% elif section.type=='pprint' %}
+                        {{section.value|pprint}}
                     {% endif %}
                     </div>
                 {% endfor %}

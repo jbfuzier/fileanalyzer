@@ -48,12 +48,12 @@ class Skeleton():
             return self._reject(submission)
 
     def _accept(self, submission):
-        logging.debug("Accepted")
+        logging.debug("%s Accepted"%self.__ModuleName__)
         self.queue.put(submission.id)
         return True
 
     def _reject(self, submission):
-        logging.debug("Rejected")
+        logging.debug("%s Rejected"%self.__ModuleName__)
         return False
 
 

@@ -7,6 +7,8 @@ import logging
 from Queue import Queue
 from dispatcher import Dispatcher
 from Model import Report, File, Session
+import re
+from jinja2 import evalcontextfilter, Markup, escape
 
 config = ConfigBorg()
 
@@ -84,7 +86,15 @@ def hello_world():
     else:
         return render_template('submit.html')
 
-
+_paragraph_re = re.compile(r'(?:\r\n|\r(?!\n)|\n){2,}')
+@app.template_filter()
+@evalcontextfilter
+def nl2br(eval_ctx, value):
+    result = u'\n\n'.join(u'<p>%s</p>' % p.replace(u'\n', Markup('<br>\n'))
+                          for p in _paragraph_re.split(value))
+    if eval_ctx.autoescape:
+        result = Markup(result)
+    return result
 
 
 def start_flask():
