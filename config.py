@@ -23,6 +23,6 @@ class ConfigBorg:  # Shared state class (singleton like http://code.activestate.
     worker_threads = 2
     flask = {'upload_dir': 'upload'}
     db_path = 'sqlite:///db.sqlite?check_same_thread=False'
-    proxyhandler = {'https': 'https://', 'http': 'http://'}
+    proxyhandler = {'https': 'https://:3128', 'http': 'http://3128'}
 
 

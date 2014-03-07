@@ -5,6 +5,7 @@ from multiprocessing import Process, Queue
 from Tools.QueueLoggingHandler import QueueHandler
 import logging
 import urllib2
+import platform
 
 config = ConfigBorg()
 
@@ -13,7 +14,10 @@ def exiftool():
     #config = ConfigBorg()
     #if not 'instance' in config.exiftool:
     print("Starting EXIFTOOL")
-    et = ExifTool(executable_=config.exiftool['win32_binary_location'])
+    if platform.system() == "Windows":
+        et = ExifTool(executable_=config.exiftool['win32_binary_location'])
+    else:
+        et = ExifTool()
     et.start()
         #config.exiftool['instance'] = et
     #else:
